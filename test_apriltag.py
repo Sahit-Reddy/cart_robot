@@ -61,3 +61,4 @@ while True:
         break
 
 cv2.destroyAllWindows()
+freenect.sync_stop()

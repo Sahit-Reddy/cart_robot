@@ -27,9 +27,9 @@ print("Following AprilTag... Press 'q' or ESC to stop, or Ctrl+C")
 
 try:
     while True:
-        frame = get_video()
+        #frame = get_video()
         depth = get_depth()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         results = detector.detect(gray)
         
         command = 'S'
@@ -43,8 +43,8 @@ try:
             center_y = int(r.center[1])
             
             corners = r.corners.astype(int)
-            cv2.polylines(frame, [corners], True, (0, 255, 0), 2)
-            cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
+            #cv2.polylines(frame, [corners], True, (0, 255, 0), 2)
+            #cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
             
             y1, y2 = max(0, center_y - 5), min(480, center_y + 5)
             x1, x2 = max(0, center_x - 5), min(640, center_x + 5)
@@ -54,7 +54,7 @@ try:
                 distance_raw = np.median(valid)
                 distance_m = 0.1236 * np.tan(distance_raw / 2842.5 + 1.1863)
             
-            cv2.line(frame, (320, 0), (320, 480), (255, 255, 0), 1)
+            #cv2.line(frame, (320, 0), (320, 480), (255, 255, 0), 1)
             
             if distance_m > 0 and distance_m < 0.7:
                 command = 'S'
@@ -73,17 +73,17 @@ try:
                 status = "FORWARD"
                 color = (0, 255, 255)
             
-            cv2.putText(frame, f"ID: {r.tag_id}", (center_x - 20, center_y - 40),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-            cv2.putText(frame, f"{distance_m:.2f}m", (center_x - 20, center_y - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            #cv2.putText(frame, f"ID: {r.tag_id}", (center_x - 20, center_y - 40),
+                        #cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+            #cv2.putText(frame, f"{distance_m:.2f}m", (center_x - 20, center_y - 15),
+                        #cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
         
-        cv2.putText(frame, status, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
-        cv2.putText(frame, f"Dist: {distance_m:.2f}m", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        #cv2.putText(frame, status, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+        #cv2.putText(frame, f"Dist: {distance_m:.2f}m", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         
         send_command(command)
         
-        cv2.imshow("AprilTag Follower", frame)
+        #cv2.imshow("AprilTag Follower", frame)
         
         key = cv2.waitKey(100) & 0xFF
         if key == ord('q') or key == 27:

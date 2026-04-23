@@ -85,7 +85,7 @@ try:
         
         cv2.imshow("AprilTag Follower", frame)
         
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.waitKey(10) & 0xFF
         if key == ord('q') or key == 27:
             break
 

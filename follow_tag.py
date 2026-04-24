@@ -62,11 +62,11 @@ try:
                 command = 'S'
                 status = "ARRIVED"
                 color = (0, 255, 0)
-            elif center_x < 260:
+            elif center_x < 220:
                 command = 'L'
                 status = "TURN LEFT"
                 color = (255, 0, 0)
-            elif center_x > 380:
+            elif center_x > 420:
                 command = 'R'
                 status = "TURN RIGHT"
                 color = (0, 0, 255)

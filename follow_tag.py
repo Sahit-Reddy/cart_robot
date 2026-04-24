@@ -25,11 +25,13 @@ detector = apriltag.Detector()
 
 print("Following AprilTag... Press 'q' or ESC to stop, or Ctrl+C")
 
+last_command = None
+
 try:
     while True:
-        #frame = get_video()
+        frame = get_video()
         depth = get_depth()
-        #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         results = detector.detect(gray)
         
         command = 'S'
@@ -60,11 +62,11 @@ try:
                 command = 'S'
                 status = "ARRIVED"
                 color = (0, 255, 0)
-            elif center_x < 280:
+            elif center_x < 260:
                 command = 'L'
                 status = "TURN LEFT"
                 color = (255, 0, 0)
-            elif center_x > 360:
+            elif center_x > 380:
                 command = 'R'
                 status = "TURN RIGHT"
                 color = (0, 0, 255)
@@ -81,11 +83,15 @@ try:
         #cv2.putText(frame, status, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
         #cv2.putText(frame, f"Dist: {distance_m:.2f}m", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         
-        send_command(command)
+        if command != last_command:
+            send_command(command)
+            last_command = command
         
         #cv2.imshow("AprilTag Follower", frame)
         
-        key = cv2.waitKey(100) & 0xFF
+        time.sleep(0.1)
+        
+        key = cv2.waitKey(1) & 0xFF
         if key == ord('q') or key == 27:
             break
 

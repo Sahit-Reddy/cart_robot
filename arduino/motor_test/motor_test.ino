@@ -48,13 +48,18 @@ long getDistance() {
   return distance;
 }
 
+// Motor speed constants
+const int FORWARD_SPEED = 120;
+const int TURN_SPEED = 100;
+const int TURN_PULSE_MS = 100;
+
 void forward() {
   digitalWrite(in1, HIGH);
   digitalWrite(in2, LOW);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
-  analogWrite(enA, 150);
-  analogWrite(enB, 150);
+  analogWrite(enA, FORWARD_SPEED);
+  analogWrite(enB, FORWARD_SPEED);
 }
 
 void backward() {
@@ -62,8 +67,8 @@ void backward() {
   digitalWrite(in2, HIGH);
   digitalWrite(in3, LOW);
   digitalWrite(in4, HIGH);
-  analogWrite(enA, 150);
-  analogWrite(enB, 150);
+  analogWrite(enA, FORWARD_SPEED);
+  analogWrite(enB, FORWARD_SPEED);
 }
 
 void turnLeft() {
@@ -71,8 +76,10 @@ void turnLeft() {
   digitalWrite(in2, HIGH);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
-  analogWrite(enA, 150);
-  analogWrite(enB, 150);
+  analogWrite(enA, TURN_SPEED);
+  analogWrite(enB, TURN_SPEED);
+  delay(TURN_PULSE_MS);
+  stopMotors();
 }
 
 void turnRight() {
@@ -80,8 +87,10 @@ void turnRight() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, LOW);
   digitalWrite(in4, HIGH);
-  analogWrite(enA, 150);
-  analogWrite(enB, 150);
+  analogWrite(enA, TURN_SPEED);
+  analogWrite(enB, TURN_SPEED);
+  delay(TURN_PULSE_MS);
+  stopMotors();
 }
 
 void stopMotors() {

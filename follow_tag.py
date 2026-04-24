@@ -85,6 +85,10 @@ try:
         
         if command != last_command:
             send_command(command)
+            if results:
+                print(f"Command: {command} | Tag x: {center_x}")
+            else:
+                print(f"Command: {command} | NO TAG")
             last_command = command
         
         #cv2.imshow("AprilTag Follower", frame)

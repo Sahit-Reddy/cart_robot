@@ -8,12 +8,12 @@ int enB = 6;
 int in3 = 10;
 int in4 = 11;
 
-// Ultrasonic sensor
-int trigPin = 22;
-int echoPin = 23;
+// Ultrasonic sensor - disabled until wired up
+// int trigPin = 22;
+// int echoPin = 23;
 
 // Safety distance in cm
-int safeDistance = 30;
+// int safeDistance = 30;
 
 void setup() {
   Serial.begin(9600);
@@ -25,28 +25,28 @@ void setup() {
   pinMode(in3, OUTPUT);
   pinMode(in4, OUTPUT);
   
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
+  // pinMode(trigPin, OUTPUT);
+  // pinMode(echoPin, INPUT);
   
   stopMotors();
 }
 
-long getDistance() {
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  
-  long duration = pulseIn(echoPin, HIGH, 30000);  // 30ms timeout
-  long distance = duration * 0.034 / 2;  // Convert to cm
-  
-  if (distance == 0) {
-    distance = 999;  // No reading = far away
-  }
-  
-  return distance;
-}
+// long getDistance() {
+//   digitalWrite(trigPin, LOW);
+//   delayMicroseconds(2);
+//   digitalWrite(trigPin, HIGH);
+//   delayMicroseconds(10);
+//   digitalWrite(trigPin, LOW);
+//   
+//   long duration = pulseIn(echoPin, HIGH, 30000);  // 30ms timeout
+//   long distance = duration * 0.034 / 2;  // Convert to cm
+//   
+//   if (distance == 0) {
+//     distance = 999;  // No reading = far away
+//   }
+//   
+//   return distance;
+// }
 
 // Motor speed constants
 const int FORWARD_SPEED = 120;
@@ -99,15 +99,15 @@ void stopMotors() {
 }
 
 void loop() {
-  long distance = getDistance();
-  
-  // Safety override - stop if obstacle detected
-  if (distance < safeDistance) {
-    stopMotors();
-    Serial.println("OBSTACLE");
-    delay(100);
-    return;  // Skip processing Pi commands
-  }
+  // long distance = getDistance();
+  // 
+  // // Safety override - stop if obstacle detected
+  // if (distance < safeDistance) {
+  //   stopMotors();
+  //   Serial.println("OBSTACLE");
+  //   delay(100);
+  //   return;  // Skip processing Pi commands
+  // }
   
   // Process commands from Pi
   if (Serial.available() > 0) {

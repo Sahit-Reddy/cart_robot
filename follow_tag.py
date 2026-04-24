@@ -83,13 +83,13 @@ try:
         #cv2.putText(frame, status, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
         #cv2.putText(frame, f"Dist: {distance_m:.2f}m", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         
-        if command != last_command:
-            send_command(command)
-            if results:
-                print(f"Command: {command} | Tag x: {center_x}")
-            else:
-                print(f"Command: {command} | NO TAG")
-            last_command = command
+        #if command != last_command:
+        send_command(command)
+        if results:
+            print(f"Command: {command} | Tag x: {center_x}")
+        else:
+            print(f"Command: {command} | NO TAG")
+        last_command = command
         
         #cv2.imshow("AprilTag Follower", frame)
         

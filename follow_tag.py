@@ -29,22 +29,22 @@ last_command = None
 
 try:
     while True:
-        frame = get_video()
-        depth = get_depth()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        results = detector.detect(gray)
+        frame = get_video() #Call the get_video function to capture a frame from the Kinect camera
+        depth = get_depth() #Call the get_depth function to capture the depth data from the Kinect camera
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) #Create a grayscale image
+        results = detector.detect(gray) #Detect AprilTags in the grayscale image
         
         command = 'S'
         status = "No tag - stopped"
         distance_m = 0
-        color = (100, 100, 100)
+        color = (100, 100, 100) #Default color for no tag, structure is R,G,B
         
         if results:
-            r = results[0]
-            center_x = int(r.center[0])
-            center_y = int(r.center[1])
+            r = results[0] #Find the first detected tag
+            center_x = int(r.center[0]) #extract it's x coordinate for center
+            center_y = int(r.center[1]) #extract it's y coordinate for center
             
-            corners = r.corners.astype(int)
+            corners = r.corners.astype(int) #extract corners of the tag for visualization
             #cv2.polylines(frame, [corners], True, (0, 255, 0), 2)
             #cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
             

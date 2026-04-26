@@ -58,7 +58,7 @@ void forward() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
-  analogWrite(enA, FORWARD_SPEED - 20);
+  analogWrite(enA, FORWARD_SPEED);
   analogWrite(enB, FORWARD_SPEED);
 }
 

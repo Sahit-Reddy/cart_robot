@@ -23,6 +23,11 @@ KINECT_VFOV_DEG = 43.0
 FX = (FRAME_WIDTH / 2.0) / math.tan(math.radians(KINECT_HFOV_DEG / 2.0))
 FY = (FRAME_HEIGHT / 2.0) / math.tan(math.radians(KINECT_VFOV_DEG / 2.0))
 
+KINECT_HEIGHT_M = 0.60
+KINECT_PITCH_DOWN_DEG = 8.0
+MIN_OBSTACLE_HEIGHT_M = 0.08
+MAX_OBSTACLE_HEIGHT_M = 1.20
+
 STOP_DISTANCE_M = 0.70
 SLOW_DISTANCE_M = 1.20
 FAST_DISTANCE_M = 2.00
@@ -62,11 +67,11 @@ GRID_X_MIN_M = -2.2
 GRID_X_MAX_M = 2.2
 GRID_Z_MIN_M = 0.15
 GRID_Z_MAX_M = 4.0
-GRID_RES_M = 0.10
+GRID_RES_M = 0.15
 
-DEPTH_ROI_Y_START = FRAME_HEIGHT // 2
-DEPTH_ROI_Y_END = FRAME_HEIGHT - 20
-DEPTH_BLOCK_SIZE = 8
+DEPTH_ROI_Y_START = int(FRAME_HEIGHT * 0.45)
+DEPTH_ROI_Y_END = int(FRAME_HEIGHT * 0.85)
+DEPTH_BLOCK_SIZE = 12
 MIN_VALID_DEPTH_M = 0.25
 MAX_VALID_DEPTH_M = 4.0
 MIN_BLOCK_VALID_PIXELS = 10
@@ -84,7 +89,7 @@ SEARCH_PWM = 65
 
 FRONT_STOP_DISTANCE_M = 0.55
 FRONT_STOP_HALF_WIDTH_M = 0.35
-FRONT_STOP_MIN_POINTS = 12
+FRONT_STOP_MIN_POINTS = 6
 
 OBSTACLE_STOP_HOLD_SEC = 0.35
 
@@ -127,10 +132,17 @@ def depth_at_tag_center(depth, center_x, center_y):
     return float(kinect_raw_to_meters(np.median(valid)))
 
 
-def project_pixel_to_xz(u, depth_m):
+def project_pixel_to_camera_xyz(u, v, depth_m):
     x = ((float(u) - IMAGE_CENTER_X) / FX) * depth_m
+    y_down = ((float(v) - IMAGE_CENTER_Y) / FY) * depth_m
     z = depth_m
-    return x, z
+    return x, y_down, z
+
+
+def camera_y_down_to_height(y_down, z):
+    pitch = math.radians(KINECT_PITCH_DOWN_DEG)
+    world_down = math.cos(pitch) * y_down + math.sin(pitch) * z
+    return KINECT_HEIGHT_M - world_down
 
 
 def tag_area(result):
@@ -259,6 +271,8 @@ def build_free_space_grid(depth_m):
     shape = grid_shape()
     occupied = np.zeros(shape, dtype=bool)
     obstacle_points = []
+    raw_candidate_count = 0
+    height_rejected_count = 0
 
     for y in range(DEPTH_ROI_Y_START, DEPTH_ROI_Y_END, DEPTH_BLOCK_SIZE):
         for x in range(0, FRAME_WIDTH, DEPTH_BLOCK_SIZE):
@@ -269,18 +283,25 @@ def build_free_space_grid(depth_m):
 
             z = float(np.median(valid))
             u = x + DEPTH_BLOCK_SIZE / 2.0
-            px, pz = project_pixel_to_xz(u, z)
+            v = y + DEPTH_BLOCK_SIZE / 2.0
+            px, py_down, pz = project_pixel_to_camera_xyz(u, v, z)
+            point_height = camera_y_down_to_height(py_down, pz)
+            raw_candidate_count += 1
+
+            if not (MIN_OBSTACLE_HEIGHT_M <= point_height <= MAX_OBSTACLE_HEIGHT_M):
+                height_rejected_count += 1
+                continue
 
             if GRID_X_MIN_M <= px <= GRID_X_MAX_M and GRID_Z_MIN_M <= pz <= GRID_Z_MAX_M:
                 add_occupied_with_inflation(occupied, px, pz)
-                obstacle_points.append((px, pz))
+                obstacle_points.append((px, pz, point_height))
 
-    return occupied, obstacle_points
+    return occupied, obstacle_points, raw_candidate_count, height_rejected_count
 
 
 def front_obstacle_too_close(obstacle_points):
     count = 0
-    for x, z in obstacle_points:
+    for x, z, height in obstacle_points:
         if abs(x) <= FRONT_STOP_HALF_WIDTH_M and 0.0 < z <= FRONT_STOP_DISTANCE_M:
             count += 1
             if count >= FRONT_STOP_MIN_POINTS:
@@ -493,7 +514,7 @@ def main():
             frame = get_video()
             depth = get_depth()
             depth_m = raw_depth_array_to_meters(depth)
-            occupied, obstacle_points = build_free_space_grid(depth_m)
+            occupied, obstacle_points, raw_candidates, height_rejected = build_free_space_grid(depth_m)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             results = detector.detect(gray)
             tag = choose_tag(results)
@@ -508,6 +529,8 @@ def main():
             adaptive_active = False
             plan_mode = "NONE"
             path_len = 0
+
+            occupied_ratio = float(np.mean(occupied))
 
             if front_obstacle_too_close(obstacle_points):
                 obstacle_stop_until = loop_time + OBSTACLE_STOP_HOLD_SEC
@@ -629,10 +652,15 @@ def main():
                         f"{status:20s} | tag_id={tag.tag_id} "
                         f"x={center_x:3d} err={x_error:+.2f} "
                         f"dist={distance_m:.2f}m pwm=({left_pwm},{right_pwm}) "
-                        f"plan={plan_mode} path={path_len} obst={obstacle_blocking}"
+                        f"plan={plan_mode} path={path_len} occ={occupied_ratio:.2f} "
+                        f"cand={raw_candidates} rej={height_rejected} obst={obstacle_blocking}"
                     )
                 else:
-                    print(f"{status:20s} | pwm=({left_pwm},{right_pwm}) obst={obstacle_blocking}")
+                    print(
+                        f"{status:20s} | pwm=({left_pwm},{right_pwm}) "
+                        f"occ={occupied_ratio:.2f} cand={raw_candidates} rej={height_rejected} "
+                        f"obst={obstacle_blocking}"
+                    )
                 last_print_time = loop_time
 
             time.sleep(0.005)

@@ -46,6 +46,13 @@ PRINT_PERIOD_SEC = 0.50
 ERROR_SMOOTHING_ALPHA = 0.35
 DIST_SMOOTHING_ALPHA = 0.25
 
+TAG_LOST_COAST_SEC = 0.25
+TAG_LOST_SCAN_SEC = 4.00
+TAG_LOST_STOP_SEC = 6.00
+SCAN_PWM = 65
+SCAN_DIRECTION_SWITCH_SEC = 1.25
+LOST_COAST_MULT = 0.45
+
 
 def clamp(value, lo, hi):
     return max(lo, min(hi, value))
@@ -153,6 +160,36 @@ def compute_motor_pwm(x_error, distance_m, adaptive_active):
     return left_pwm, right_pwm, status
 
 
+def compute_scan_pwm(lost_time, last_seen_error, last_visible_pwm):
+    if lost_time <= TAG_LOST_COAST_SEC:
+        left_pwm = int(last_visible_pwm[0] * LOST_COAST_MULT)
+        right_pwm = int(last_visible_pwm[1] * LOST_COAST_MULT)
+        return left_pwm, right_pwm, "LOST - COAST"
+
+    if lost_time <= TAG_LOST_SCAN_SEC:
+        if last_seen_error is None:
+            base_direction = 1
+        elif last_seen_error >= 0:
+            base_direction = 1
+        else:
+            base_direction = -1
+
+        scan_phase = int((lost_time - TAG_LOST_COAST_SEC) / SCAN_DIRECTION_SWITCH_SEC)
+        if scan_phase % 2 == 1:
+            base_direction *= -1
+
+        if base_direction > 0:
+            return SCAN_PWM, -SCAN_PWM, "SCAN RIGHT"
+        return -SCAN_PWM, SCAN_PWM, "SCAN LEFT"
+
+    if lost_time <= TAG_LOST_STOP_SEC:
+        if last_seen_error is not None and last_seen_error >= 0:
+            return int(SCAN_PWM * 0.65), int(-SCAN_PWM * 0.65), "SLOW SCAN RIGHT"
+        return int(-SCAN_PWM * 0.65), int(SCAN_PWM * 0.65), "SLOW SCAN LEFT"
+
+    return 0, 0, "LOST - STOP"
+
+
 def send_motor_command(ser, left_pwm, right_pwm):
     packet = f"M,{left_pwm},{right_pwm}\n"
     ser.write(packet.encode("ascii"))
@@ -179,6 +216,10 @@ def main():
     smoothed_distance = None
     previous_abs_error = None
     not_improving_since = None
+
+    last_seen_time = None
+    last_seen_error = None
+    last_visible_pwm = (0, 0)
 
     try:
         while True:
@@ -247,6 +288,10 @@ def main():
                     adaptive_active=adaptive_active,
                 )
 
+                last_seen_time = loop_time
+                last_seen_error = x_error
+                last_visible_pwm = (left_pwm, right_pwm)
+
                 # corners = tag.corners.astype(int)
                 # cv2.polylines(frame, [corners], True, (0, 255, 0), 2)
                 # cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
@@ -260,6 +305,20 @@ def main():
                 smoothed_distance = None
                 previous_abs_error = None
                 not_improving_since = None
+
+                if last_seen_time is None:
+                    left_pwm, right_pwm, status = compute_scan_pwm(
+                        lost_time=TAG_LOST_COAST_SEC + 0.01,
+                        last_seen_error=None,
+                        last_visible_pwm=(0, 0),
+                    )
+                else:
+                    lost_time = loop_time - last_seen_time
+                    left_pwm, right_pwm, status = compute_scan_pwm(
+                        lost_time=lost_time,
+                        last_seen_error=last_seen_error,
+                        last_visible_pwm=last_visible_pwm,
+                    )
 
             # cv2.putText(frame, status, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 3)
             # cv2.putText(frame, f"Dist: {distance_m:.2f}m", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
@@ -275,13 +334,16 @@ def main():
             if loop_time - last_print_time >= PRINT_PERIOD_SEC:
                 if tag is not None:
                     print(
-                        f"{status:12s} | tag_id={tag.tag_id} "
+                        f"{status:14s} | tag_id={tag.tag_id} "
                         f"x={center_x:3d} err={x_error:+.2f} "
                         f"dist={distance_m:.2f}m pwm=({left_pwm},{right_pwm}) "
                         f"adaptive={adaptive_active}"
                     )
                 else:
-                    print(f"{status:12s} | pwm=({left_pwm},{right_pwm})")
+                    if last_seen_time is None:
+                        print(f"{status:14s} | pwm=({left_pwm},{right_pwm}) lost=never_seen")
+                    else:
+                        print(f"{status:14s} | pwm=({left_pwm},{right_pwm}) lost={loop_time - last_seen_time:.2f}s")
                 last_print_time = loop_time
 
             time.sleep(0.005)

@@ -3,8 +3,9 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
-# Load YOLO model
+# Load YOLO model on CPU
 model = YOLO('yolov8n.pt')
+model.to('cpu')
 
 # Frame dimensions
 FRAME_WIDTH = 640
@@ -26,7 +27,7 @@ def check_obstacle(results):
     for r in results:
         for box in r.boxes:
             conf = float(box.conf[0])
-            if conf < 0.5:  # Ignore low confidence
+            if conf < 0.5:
                 continue
                 
             x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -38,11 +39,11 @@ def check_obstacle(results):
                     return True, model.names[cls]
     return False, None
 
-print("Running YOLO obstacle detection... Press 'q' to quit")
+print("Running YOLO obstacle detection (CPU)... Press 'q' to quit")
 
 while True:
     frame = get_video()
-    results = model(frame, verbose=False, imgsz=320)
+    results = model(frame, verbose=False, imgsz=320, device='cpu')
     
     obstacle, obj_name = check_obstacle(results)
     
